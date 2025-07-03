@@ -20,7 +20,7 @@ A PyTorch implementation of a Variational Autoencoder (VAE) for generating cryst
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone <https://github.com/Eddah-Sure/Crystal-Graphs-Generator>
 cd crystal-vae
 
 # Install required packages
