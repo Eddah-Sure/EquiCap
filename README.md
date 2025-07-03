@@ -9,7 +9,6 @@ A PyTorch implementation of a Variational Autoencoder (VAE) for generating cryst
 - **Geometric-Aware Generation**: Decoder uses geometric operations for realistic structure generation
 - **Property-Conditioned Generation**: Generate crystals with specific target properties
 - **Hierarchical Capsule Decoding**: Multi-level capsule transformations (latent → primary → secondary → geometric)
-- **Modular Design**: Clean, well-documented code structure for easy extension
 - **Comprehensive Utilities**: Training, generation, and analysis tools included
 
 ## Installation
@@ -22,7 +21,7 @@ A PyTorch implementation of a Variational Autoencoder (VAE) for generating cryst
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone <https://github.com/Eddah-Sure/Crystal-Graphs-Generator>
 cd crystal-vae
 
 # Install required packages
@@ -82,7 +81,7 @@ python main.py train \
     --dataset-path /path/to/dataset \
     --target-name e_form \
     --epochs 100 \
-    --batch-size 32
+    --batch-size 16
 
 # Generate structures
 python main.py generate \
@@ -260,9 +259,9 @@ If you use this code in your research, please cite:
 ```bibtex
 @software{crystal_vae,
   title={Crystal VAE: E(3)-Equivariant Variational Autoencoder for Crystal Structure Generation},
-  author={Your Name},
-  year={2024},
-  url={https://github.com/your-username/crystal-vae}
+  author={Sure Eddah K.},
+  year={2025},
+  url={https://github.com/Eddah-Sure/crystal-vae}
 }
 ```
 
@@ -289,16 +288,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
    - Reduce dataset size for testing
    - Use fewer convolution layers: `--num-conv-layers 2`
 
-3. **Poor Generation Quality**
-   - Train for more epochs: `--epochs 200`
-   - Adjust KL weight: `--kl-weight 0.001`
-   - Increase latent dimension: `--latent-dim 128`
 
-### Getting Help
-
-- Check the [Issues](https://github.com/your-username/crystal-vae/issues) page
-- Review the example usage in `main.py`
-- Examine the original `fullfile.py` for reference implementation
 
 ## Performance Benchmarks
 
