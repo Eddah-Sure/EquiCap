@@ -4,9 +4,11 @@ A PyTorch implementation of a Variational Autoencoder (VAE) for generating cryst
 
 ## Features
 
-- **E(3)-Equivariant Architecture**: Maintains rotational symmetry for crystal structures
+- **Symmetric Capsule Architecture**: Both encoder and decoder use capsule networks with dynamic routing
+- **Complete E(3)-Equivariance**: RBF and spherical harmonics throughout encoding and decoding
+- **Geometric-Aware Generation**: Decoder uses geometric operations for realistic structure generation
 - **Property-Conditioned Generation**: Generate crystals with specific target properties
-- **Capsule Networks**: Advanced representation learning for complex crystal structures
+- **Hierarchical Capsule Decoding**: Multi-level capsule transformations (latent → primary → secondary → geometric)
 - **Modular Design**: Clean, well-documented code structure for easy extension
 - **Comprehensive Utilities**: Training, generation, and analysis tools included
 
@@ -20,7 +22,7 @@ A PyTorch implementation of a Variational Autoencoder (VAE) for generating cryst
 
 ```bash
 # Clone the repository
-git clone <https://github.com/Eddah-Sure/Crystal-Graphs-Generator>
+git clone <repository-url>
 cd crystal-vae
 
 # Install required packages
@@ -106,7 +108,9 @@ python main.py generate \
 
 3. **Model Architecture** (`models.py`)
    - `EncoderGNN`: Graph encoder with capsule networks
-   - `DecoderGNN`: Structure generator
+   - `CapsuleDecoderLayer`: Capsule-based decoder with dynamic routing
+   - `E3EquivariantDecoderLayer`: E(3)-equivariant geometric decoder
+   - `DecoderGNN`: Enhanced capsule-centric structure generator
    - `CrystalVAE`: Complete VAE model
 
 4. **Training Utilities** (`train.py`)
@@ -118,6 +122,27 @@ python main.py generate \
    - Structure generation with target properties
    - Batch generation and analysis
    - Visualization utilities
+
+### Enhanced Decoder Architecture
+
+The decoder has been significantly enhanced to be **capsule-centric and E(3)-equivariant**, matching the sophistication of the encoder:
+
+#### Hierarchical Capsule Pipeline
+1. **Latent to Primary Capsules**: Transform latent vectors into initial capsule representations
+2. **Primary Capsule Decoder**: Apply dynamic routing to refine capsule features
+3. **Secondary Capsule Decoder**: Further refinement with inter-capsule routing
+4. **Geometric Decoder**: Generate positions and edges using E(3)-equivariant operations
+
+#### Key Components
+- **CapsuleDecoderLayer**: Implements dynamic routing for hierarchical capsule transformations
+- **E3EquivariantDecoderLayer**: Uses RBF expansion and spherical harmonics for geometric generation
+- **Symmetric Architecture**: Both encoder and decoder use capsule networks with dynamic routing
+
+#### Benefits
+- **Geometric Consistency**: E(3)-equivariant operations ensure realistic crystal structures
+- **Hierarchical Generation**: Multi-level capsule transformations capture complex relationships
+- **Rotational Invariance**: Generated structures maintain physical symmetries
+- **Property Conditioning**: Target properties guide the generation process
 
 ## Data Format
 
@@ -318,3 +343,4 @@ Variational framework provides:
 - Probabilistic generation
 - Regularized representations
 - Property conditioning
+
