@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.eggs/
+.venv/
+venv/
+
+# Tooling
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.DS_Store
+
+# Run artefacts
+*.pt
+*.pkl
+*.npz
+*.npy
+propertycheckpoints/
+graph_cache/
+factorial_results.csv
+*_metrics.csv
+*_test_predictions.csv
