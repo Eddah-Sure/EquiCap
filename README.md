@@ -1,336 +1,204 @@
-# Crystal VAE: E(3)-Equivariant Variational Autoencoder for Crystal Structure Generation
+# EquiCap
 
-A PyTorch implementation of a Variational Autoencoder (VAE) for generating crystal structures with desired properties. This model uses E(3)-equivariant graph neural networks and capsule networks to learn meaningful representations of crystal structures while preserving rotational symmetry.
+Controlled crystal-GNN comparison with a complete-pipeline symmetry audit.
 
-## Features
+EquiCap exists to answer one question honestly: **does a capsule readout actually
+help a crystal property predictor, and is the comparison fair?** Most published
+comparisons bundle a backbone, a readout, a graph construction and a set of
+global descriptors into a single "architecture", so an improvement cannot be
+attributed to any one of them. Here the backbone and the readout are independent
+factors, every readout works with every backbone, the neighbour graph is built
+once and shared across cells, and the invariances of the *whole pipeline* — not
+just the layer algebra — are audited numerically.
 
-- **Symmetric Capsule Architecture**: Both encoder and decoder use capsule networks with dynamic routing
-- **Complete E(3)-Equivariance**: RBF and spherical harmonics throughout encoding and decoding
-- **Geometric-Aware Generation**: Decoder uses geometric operations for realistic structure generation
-- **Property-Conditioned Generation**: Generate crystals with specific target properties
-- **Hierarchical Capsule Decoding**: Multi-level capsule transformations (latent → primary → secondary → geometric)
-- **Comprehensive Utilities**: Training, generation, and analysis tools included
+```
+backbone  ∈ {painn, cgcnn, composition}     ×     readout ∈ {attention, capsule, mean}
+```
 
-## Installation
+plus a set of named control cells (descriptor-matched structure-blind baseline,
+descriptor-free structural cells, routing-normalisation controls, a numerically
+fragile probe, a parity-breaking chiral variant, and k-NN graph construction).
 
-### Prerequisites
-- Python 3.8+
-- CUDA-capable GPU (recommended)
+---
 
-### Install Dependencies
+## Install
 
 ```bash
-# Clone the repository
-git clone <https://github.com/Eddah-Sure/Crystal-Graphs-Generator>
-cd crystal-vae
-
-# Install required packages
-pip install -r requirements.txt
-
-# For CUDA support (if available)
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+git clone https://github.com/OWNER/equicap.git
+cd equicap
+pip install -e ".[dev]"      # or: pip install -e .
 ```
 
-### Additional Dependencies
+PyTorch is not pinned to a build here — install the wheel that matches your CUDA
+version first (see pytorch.org), then install this package.
 
-For enhanced functionality, you may also install:
-```bash
-# For crystal structure analysis
-pip install pymatgen ase
-
-# For advanced visualization
-pip install plotly mayavi
-```
-
-## Quick Start
-
-### 1. Training a Model
-
-```python
-from train import run_crystal_vae
-
-# Train a model to predict formation energy
-model, history = run_crystal_vae(
-    dataset_path="/path/to/your/dataset",
-    target_name="e_form",  # Formation energy
-    epochs=100,
-    batch_size=32,
-    hidden_channels=128,
-    latent_dim=64
-)
-```
-
-### 2. Generating Crystal Structures
-
-```python
-from generate import generate_crystals
-
-# Generate crystals with specific formation energies
-structures = generate_crystals(
-    model_path="crystal_vae_e_form/best_crystal_vae_e_form.pt",
-    target_values=[-1.0, 0.0, 1.0],  # eV/atom
-    num_samples=10
-)
-```
-
-### 3. Command Line Interface
+## Verify the install
 
 ```bash
-# Train a new model
-python main.py train \
-    --dataset-path /path/to/dataset \
-    --target-name e_form \
-    --epochs 100 \
-    --batch-size 16
-
-# Generate structures
-python main.py generate \
-    --model-path crystal_vae_e_form/best_crystal_vae_e_form.pt \
-    --target-values "1.0,2.0,3.0" \
-    --num-samples 10 \
-    --output-dir generated_structures
+python -m equicap --self-test
 ```
 
-## Architecture Overview
+This needs no dataset. It constructs every `backbone × readout` cell on synthetic
+crystals and asserts that:
 
-### Core Components
+- supplied and rebuilt neighbour graphs give identical predictions;
+- gradients are finite for every cell;
+- every symmetry in the contract below holds to `1e-8` in float64, with both
+  fixed and rebuilt edges;
+- a checkpoint round trip reproduces the predictions;
+- the two *deliberate* symmetry-breaking controls do break their symmetry —
+  without this, a passing audit would not be evidence of anything;
+- a rock-salt cell gets 18 neighbours inside 4.5 Å, i.e. whole coordination
+  shells rather than an arbitrary top-K truncation.
 
-1. **Data Handling** (`data.py`)
-   - `Graph`: Crystal structure representation
-   - `CartesianGraphDataset`: PyTorch dataset for crystal data
+## Run
 
-2. **Neural Network Layers** (`layers.py`)
-   - `RadialBasisLayer`: Distance encoding
-   - `E3EquivariantCGCNNConv`: E(3)-equivariant convolution
-   - `E3EquivariantPrimaryCapsuleLayer`: Primary capsule layer
-   - `E3EquivariantSecondaryCapsuleLayer`: Secondary capsule with routing
+```bash
+# one cell
+equicap --data-root /path/to/MP20 --backbone painn --readout capsule --epochs 200
 
-3. **Model Architecture** (`models.py`)
-   - `EncoderGNN`: Graph encoder with capsule networks
-   - `CapsuleDecoderLayer`: Capsule-based decoder with dynamic routing
-   - `E3EquivariantDecoderLayer`: E(3)-equivariant geometric decoder
-   - `DecoderGNN`: Enhanced capsule-centric structure generator
-   - `CrystalVAE`: Complete VAE model
-
-4. **Training Utilities** (`train.py`)
-   - Training loops with early stopping
-   - Visualization and logging
-   - Model checkpointing
-
-5. **Generation Tools** (`generate.py`)
-   - Structure generation with target properties
-   - Batch generation and analysis
-   - Visualization utilities
-
-### Enhanced Decoder Architecture
-
-The decoder has been significantly enhanced to be **capsule-centric and E(3)-equivariant**, matching the sophistication of the encoder:
-
-#### Hierarchical Capsule Pipeline
-1. **Latent to Primary Capsules**: Transform latent vectors into initial capsule representations
-2. **Primary Capsule Decoder**: Apply dynamic routing to refine capsule features
-3. **Secondary Capsule Decoder**: Further refinement with inter-capsule routing
-4. **Geometric Decoder**: Generate positions and edges using E(3)-equivariant operations
-
-#### Key Components
-- **CapsuleDecoderLayer**: Implements dynamic routing for hierarchical capsule transformations
-- **E3EquivariantDecoderLayer**: Uses RBF expansion and spherical harmonics for geometric generation
-- **Symmetric Architecture**: Both encoder and decoder use capsule networks with dynamic routing
-
-#### Benefits
-- **Geometric Consistency**: E(3)-equivariant operations ensure realistic crystal structures
-- **Hierarchical Generation**: Multi-level capsule transformations capture complex relationships
-- **Rotational Invariance**: Generated structures maintain physical symmetries
-- **Property Conditioning**: Target properties guide the generation process
-
-## Data Format
-
-The model expects data in the following format:
-
-### Required Files
-- `BandgapTargets.npz`: Graph structure data
-- `BandgapTargets_config.json`: Configuration and atomic information
-- `BandgapTargets.csv`: Target properties
-
-### Graph Data Structure
-```python
-graph_data = {
-    'node_features': [...],      # Atomic numbers
-    'type_counts': [...],        # Edge type counts
-    'neighbor_counts': [...],    # Neighbor counts per node
-    'neighbors': [...],          # Neighbor indices
-    'bond_lengths': [...],       # Edge distances
-    'cart_coords': [...]         # Cartesian coordinates
-}
+# the full grid plus controls, three seeds
+equicap --data-root /path/to/MP20 --factorial --seeds 0 1 2
 ```
 
-## Model Configuration
-
-### Key Hyperparameters
-
-| Parameter | Description | Default | Range |
-|-----------|-------------|---------|-------|
-| `hidden_channels` | Hidden layer size | 128 | 64-512 |
-| `latent_dim` | Latent space dimension | 64 | 16-256 |
-| `num_conv_layers` | Convolution layers | 3 | 2-6 |
-| `kl_weight` | KL divergence weight | 0.01 | 0.001-0.1 |
-| `learning_rate` | Optimizer learning rate | 1e-4 | 1e-5-1e-3 |
-
-### Property Types
-
-The model supports various crystal properties:
-
-- **Formation Energy** (`e_form`): Energy to form from elements
-- **Band Gap** (`bandgap`): Electronic band gap
-- **Energy Above Hull** (`e_hull`): Thermodynamic stability
-
-## Advanced Usage
-
-### Custom Property Prediction
+From Python or a notebook:
 
 ```python
-# Define custom property configuration
-CUSTOM_PROPERTY = {
-    'name': 'Bulk Modulus',
-    'units': 'GPa',
-    'typical_range': (0, 500),
-    'description': 'Resistance to compression'
-}
+from equicap import run, run_factorial, self_test
 
-# Train model with custom property
-model, history = run_crystal_vae(
-    dataset_path="/path/to/dataset",
-    target_name="bulk_modulus",
-    epochs=100
-)
+self_test()
+model, res = run(data_root="/path/to/MP20", backbone="painn", readout="capsule")
+print(res["test"]["mae"], res["audits"]["symmetry_trained_rebuilt"])
+
+df = run_factorial(data_root="/path/to/MP20", seeds=(0, 1, 2))
 ```
 
-### Batch Generation
+Every key in `equicap.config.default_config()` is accepted as a keyword to
+`run()` and as a `--kebab-case` CLI flag; the parser is generated from that one
+dict, so the two can never drift apart.
 
-```python
-from generate import batch_generate_crystals
-
-# Generate structures across a property range
-results = batch_generate_crystals(
-    model_path="model.pt",
-    target_range=(0.5, 3.0, 10),  # min, max, num_points
-    num_samples_per_target=5,
-    output_dir="batch_results"
-)
-```
-
-### Structure Analysis
-
-```python
-from generate import analyze_generated_structures
-
-# Analyze generated structures
-analysis = analyze_generated_structures(structures)
-print(f"Average nodes per structure: {analysis[1.0]['num_nodes']['mean']}")
-```
-
-## File Structure
+## Expected data layout
 
 ```
-crystal-vae/
-├── data.py              # Data handling classes
-├── layers.py            # Neural network layers
-├── models.py            # Model architectures
-├── train.py             # Training utilities
-├── generate.py          # Generation tools
-├── main.py              # Command line interface
-├── requirements.txt     # Dependencies
-├── README.md           # This file
-└── fullfile.py         # Original monolithic file
+data_root/
+  train/  train_config.json  train.npz  train.csv
+  val/    val_config.json    val.npz    val.csv
+  test/   test_config.json   test.npz   test.csv
 ```
 
-## Contributing
+`*.npz` holds a pickled `graph_dict` mapping `material_id` to a structure record
+(`node_features`, `cart_coords` or `frac_coords`, `lattice_matrix`, optionally
+`space_group`, `edge_index`, `edge_offsets`). `*.csv` holds the targets and
+**must** have a `material_id` column — positional alignment of targets to
+structures is not safe and is rejected.
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+## The symmetry contract
 
-## Citation
+`equicap.audit.symmetry_audit` checks the trained predictor against six
+transforms. For `chirality=False` and `global_features != "full"`, all six drifts
+must be at numerical zero:
 
-If you use this code in your research, please cite:
+| Transform | What it tests |
+|---|---|
+| rotation | O(3) invariance of the scalar channels |
+| reflection | parity evenness (allowed to break only with `chirality=True`) |
+| translation | no dependence on the origin of the cell |
+| permutation | no dependence on atom ordering |
+| periodic image | no dependence on which image an atom is written in |
+| supercell | intensivity under exact replication |
 
-```bibtex
-@software{crystal_vae,
-  title={Crystal VAE: E(3)-Equivariant Variational Autoencoder for Crystal Structure Generation},
-  author={Sure Eddah K.},
-  year={2025},
-  url={https://github.com/Eddah-Sure/crystal-vae}
-}
+Two audit modes, and the difference between them is the point:
+
+- `edge_mode="fixed"` transforms the **edge list along with the structure**,
+  remapping indices and periodic offsets so each edge still points at the same
+  physical neighbour. Drift here is the network and its numerics, nothing else.
+- `edge_mode="rebuilt"` lets the neighbour search run again on the transformed
+  structure, so drift now also includes neighbour selection and image
+  enumeration.
+
+Run both in float32 and float64 (`dtype=torch.float64`) to separate arithmetic
+invariance from rounding. `per_structure=True` returns per-crystal drift arrays,
+which is what you need to split the reflection test by centrosymmetric versus
+Sohncke space groups (`equicap.spacegroups`).
+
+`equicap.audit.audit_edges` is the separate, earlier check: it recomputes edge
+lengths from coordinates, lattice and stored offsets. Mass beyond the cutoff
+means the mined graph is wrong and `edge_source="stored"` must not be used.
+
+## Things worth knowing before you report numbers
+
+- **The MAD ratio, not R².** `compute_metrics` reports `mad_over_mae`: the
+  mean-absolute-deviation baseline divided by the model's MAE. A value near 1
+  means the model has learned nothing useful whatever the R² says.
+- **Polymorph multiplicity.** `CrystalPropertyDataset.composition_stats()`
+  reports structures per reduced composition. If that ratio is near 1, a
+  composition-only baseline can in principle match any structural model, and the
+  `composition` backbone is the control that shows it.
+- **The radius cap.** When an atom has more than `max_deg` neighbours inside the
+  cutoff, the graph is no longer a radius graph. The affected atom count is
+  tracked per split (`n_overflow_atoms`), warned about, and stored in the
+  checkpoint under `audits["overflow_atoms"]`. Report it.
+- **`global_features="full"` is an ablation, not a default.** It is deliberately
+  not supercell-invariant and the self-test asserts that it breaks.
+- **`probe="legacy"`** reproduces `<v_i,v_j>/(|v_i||v_j|+1e-6)`, whose value at a
+  symmetry-cancelled site is the direction of a float32 rounding residual. It
+  exists so the paper can quantify what the smooth probe fixes.
+- **Routing normalisation.** At the first routing iteration `atoms` and `mass`
+  differ only by a factor `1/M`; the scale-matched control is `mass` with
+  `temperature = n_caps` (the `massT` variant). Later iterations differ
+  genuinely. See `MotifCapsules` for the derivation.
+- **`neighbor_mode="knn"`** keeps the `max_deg` nearest pairs *that also fall
+  inside the cutoff*, since the RBF envelope is defined on that cutoff. It is the
+  graph-construction ablation, not a second default.
+
+## Repository layout
+
+| Path | Contents |
+|---|---|
+| `equicap/utils.py` | seeding, one-shot warnings, environment probes |
+| `equicap/geometry.py` | norms, lattice descriptors, periodic neighbour list |
+| `equicap/spacegroups.py` | centrosymmetric / Sohncke tables |
+| `equicap/chemistry.py` | element tables, physical descriptors |
+| `equicap/layers.py` | RBF, `EquivariantConv`, `CGConv`, capsule blocks |
+| `equicap/readouts.py` | attention / routing-weighted / mean-max pooling |
+| `equicap/model.py` | `CrystalPropertyModel` |
+| `equicap/transforms.py` | symmetry transforms with exact edge remapping |
+| `equicap/audit.py` | `symmetry_audit`, `audit_edges` |
+| `equicap/data.py` | dataset, collate, shared element vocabulary |
+| `equicap/metrics.py` | MAE / RMSE / R² / r / MAD ratio |
+| `equicap/training.py` | EMA, LR schedule, train and validate loops |
+| `equicap/checkpoint.py` | save / load / rebuild-from-config |
+| `equicap/inference.py` | prediction tables, ad-hoc structure scoring |
+| `equicap/config.py` | defaults, layout check, run tags |
+| `equicap/experiment.py` | one cell (`main`) and the grid (`run_factorial`) |
+| `equicap/cli.py` | argparse front end |
+| `equicap/selftest.py` | synthetic end-to-end check |
+| `tests/` | pytest suite (`-m "not slow"` skips the full self-test) |
+| `docs/ARCHITECTURE.md` | dependency graph and design notes |
+
+## Outputs
+
+Each cell writes, under `<ckpt_dir>` (default `<data_root>/propertycheckpoints`):
+
+- `<tag>.pt` — weights, full model config, target standardisation, training
+  history, both metric dicts, and every audit result;
+- `<tag>_metrics.csv` — per-epoch training curve;
+- `<tag>_test_predictions.csv` — **per-structure** predictions, errors, atom
+  counts and space groups, which is what makes a paired error analysis between
+  two cells reproducible;
+- `<tag>_distance_hist.npy` — edge-length histogram from the graph audit.
+
+`run_factorial` additionally writes `factorial_results.csv` after *every* cell,
+so an interrupted sweep still leaves usable output.
+
+## Tests
+
+```bash
+pytest -q -m "not slow"     # fast unit tests
+pytest -q                   # including the full self-test
+ruff check equicap tests
 ```
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgments
-
-- E(3)NN library for equivariant neural networks
-- PyTorch Geometric for graph neural network utilities
-- Materials Project for crystal structure data
-
-## Troubleshooting
-
-### Common Issues
-
-1. **CUDA Out of Memory**
-   - Reduce batch size: `--batch-size 16`
-   - Reduce model size: `--hidden-channels 64`
-
-2. **Slow Training**
-   - Use GPU: Ensure CUDA is properly installed
-   - Reduce dataset size for testing
-   - Use fewer convolution layers: `--num-conv-layers 2`
-
-
-
-## Performance Benchmarks
-
-### Training Performance
-- **GPU**: NVIDIA RTX 3080 (10GB VRAM)
-- **Dataset**: 20K crystal structures
-- **Training Time**: ~2-4 hours for 100 epochs
-- **Memory Usage**: ~6-8GB VRAM with batch_size=32
-
-### Generation Performance
-- **Generation Speed**: ~100 structures/second
-- **Quality Metrics**: Property prediction MAE < 0.1 eV/atom
-- **Diversity**: High structural diversity across target ranges
-
-## Research Applications
-
-This Crystal VAE has been designed for various materials science applications:
-
-1. **Materials Discovery**: Generate novel crystal structures with desired properties
-2. **Property Optimization**: Explore structure-property relationships
-3. **Data Augmentation**: Expand limited experimental datasets
-4. **Inverse Design**: Design materials with specific target properties
-
-## Technical Details
-
-### E(3) Equivariance
-The model maintains rotational and translational symmetry through:
-- Spherical harmonic representations
-- Invariant scalar features
-- Equivariant vector features
-- Proper tensor product operations
-
-### Capsule Networks
-Dynamic routing algorithm enables:
-- Hierarchical feature learning
-- Part-whole relationships
-- Robust representation of complex structures
-
-### VAE Architecture
-Variational framework provides:
-- Continuous latent space
-- Probabilistic generation
-- Regularized representations
-- Property conditioning
-
+MIT — see [LICENSE](LICENSE).
