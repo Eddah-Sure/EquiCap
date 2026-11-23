@@ -28,7 +28,7 @@ list or a capped image search produces apparent drifts of up to
 can therefore come from the evaluation protocol and not from the
 model
 
-![EquiCap architecture](figures/F_architecture.pdf)
+![EquiCap architecture](figures/ARCHITECTURE.jpeg)
 ---
 
 ## Install
