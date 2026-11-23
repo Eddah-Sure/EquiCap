@@ -1,24 +1,34 @@
 # EquiCap
 
-Controlled crystal-GNN comparison with a complete-pipeline symmetry audit.
+When a crystal graph neural network predicts a material property more accurately, is that improvement really due to the crystal structure, or could it come from other parts of the pipeline?
 
-EquiCap exists to answer one question honestly: **does a capsule readout actually
-help a crystal property predictor, and is the comparison fair?** Most published
-comparisons bundle a backbone, a readout, a graph construction and a set of
-global descriptors into a single "architecture", so an improvement cannot be
-attributed to any one of them. Here the backbone and the readout are independent
-factors, every readout works with every backbone, the neighbour graph is built
-once and shared across cells, and the invariances of the *whole pipeline* — not
-just the layer algebra — are audited numerically.
+Crystal graph neural networks are widely used to predict material
+properties, but it is often unclear whether accuracy gains come from
+structural information or from differences in graph construction,
+chemical features, training, and evaluation. This matters because
+composition alone predicts formation energy well. Equivariant lay-
+ers also do not guarantee that a complete predictor is invariant.
+We introduce EquiCap, a controlled framework that measures how
+much structure improves prediction and audits the symmetry of the
+complete pipeline. EquiCap compares distance-only CGCNN-style,
+scalar–vector PaiNN-inspired, and composition-only backbones
+with attention, capsule-routing, and mean/max readouts. All nine
+configurations share the embedding, head, optimizer, split, and
+evaluation code. On MP-20 formation energy, the best structural
+model reaches a test MAE of 29.2 meV/atom and improves on the
+best composition-only model by 4.7 meV/atom (95% CI 4.0 to 5.4).
+This headroom is modest, because the readout alone changes the
+composition-only error by 7.9 meV/atom. The scalar–vector back-
+bone is less accurate than the distance-only backbone with every
+readout, by 6.3 to 8.5 meV/atom. Once the audit transforms edges
+exactly and the image search is complete, every predictor is invari-
+ant to within 3.3 × 10−14 eV/atom in double precision. A stale edge
+list or a capped image search produces apparent drifts of up to
+2.6 eV/atom and 7.8 × 10−2 eV/atom. Apparent symmetry failures
+can therefore come from the evaluation protocol and not from the
+model
 
-```
-backbone  ∈ {painn, cgcnn, composition}     ×     readout ∈ {attention, capsule, mean}
-```
-
-plus a set of named control cells (descriptor-matched structure-blind baseline,
-descriptor-free structural cells, routing-normalisation controls, a numerically
-fragile probe, a parity-breaking chiral variant, and k-NN graph construction).
-
+![EquiCap architecture](figures/Equicap.pdf)
 ---
 
 ## Install
