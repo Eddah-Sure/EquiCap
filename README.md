@@ -34,7 +34,6 @@ model
 ## Install
 
 ```bash
-git clone https://github.com/OWNER/equicap.git
 cd equicap
 pip install -e ".[dev]"      # or: pip install -e .
 ```
